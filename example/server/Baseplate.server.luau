@@ -5,6 +5,11 @@
 
 local Workspace = game:GetService("Workspace")
 
+-- Evita duplicar el suelo si el script se ejecuta más de una vez
+if Workspace:FindFirstChild("Baseplate") ~= nil then
+	return
+end
+
 local BASEPLATE_SIZE = Vector3.new(512, 16, 512)
 
 local baseplate = Instance.new("Part")

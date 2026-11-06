@@ -12,6 +12,13 @@ local Logger = require(CoreKit.Util.Logger)
 
 local MODULE = "ExampleServer"
 
+-- Protección del ejemplo: si por algún motivo este script se ejecuta más de una vez
+-- (p. ej. una copia duplicada en el place), no se vuelve a llamar a Init ni a RegisterCommand.
+if ReplicatedStorage:FindFirstChild("CoreKit_Debug") ~= nil then
+	Logger.Warn(MODULE, "DebugService ya estaba iniciado; se omite esta ejecución duplicada del ejemplo")
+	return
+end
+
 -- En Studio todos están autorizados. En un servidor publicado hace falta
 -- ProductionEnabled = true y tu UserId en esta lista.
 DebugService.Init({
