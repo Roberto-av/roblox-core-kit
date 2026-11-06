@@ -49,3 +49,32 @@ local function testCleaner()
 end
 
 testCleaner()
+
+-- Fase 2: 20 llamadas a Play("Click") deben crear una sola Sound.
+local function testSoundPlayer()
+	local SoundService = game:GetService("SoundService")
+	local SoundPlayer = require(CoreKit.SoundPlayer)
+
+	for _ = 1, 20 do
+		SoundPlayer.Play("Click")
+	end
+	SoundPlayer.Play("ClaveInexistente") -- debe avisar con Logger.Warn y no fallar
+
+	local folder = SoundService:FindFirstChild("CoreKit_Sounds")
+	local count = 0
+	if folder then
+		for _, child in folder:GetChildren() do
+			if child.Name == "Click" then
+				count += 1
+			end
+		end
+	end
+
+	if count == 1 then
+		Logger.Info(MODULE, "SoundPlayer OK: 20 Play('Click') -> 1 sola Sound")
+	else
+		Logger.Error(MODULE, `SoundPlayer FALLO: {count} Sounds 'Click'`)
+	end
+end
+
+testSoundPlayer()
