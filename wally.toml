@@ -6,6 +6,7 @@ realm = "shared"
 description = "UI multiplataforma, navegación por gamepad y debug extensible con Iris"
 license = "MIT"
 authors = ["Roberto-av"]
+exclude = ["example/**", "scripts/**", "docs/PLAN.md", "docs/general_especifications.md", "dev.project.json", "rokit.toml", "selene.toml", "stylua.toml", "sourcemap.json", "*.rbxl", "*.rbxm", "*.lock"]
 include = ["src", "src/**", "default.project.json", "wally.toml", "README.md", "LICENSE"]
 
 [dependencies]

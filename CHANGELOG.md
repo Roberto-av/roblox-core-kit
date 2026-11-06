@@ -16,4 +16,5 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Componentes: `Button`, `ScrollView`, `Toast`, `Modal`, `SubModal` y `ConfirmDialog`.
 - Debug: `DebugAuth`, `DebugRateLimiter` y `DebugService` (servidor); `DebugController` con Iris (cliente).
 - Ejemplo en `example/` con suelo anclado para pruebas con F5.
+- `scripts/verify-package.py`: verifica el contenido del paquete Wally y su consumo como dependencia externa.
 - Documentación: `README.md`, `docs/ARCHITECTURE.md` y `docs/API_REFERENCE.md`.

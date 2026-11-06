@@ -70,6 +70,7 @@ wally install
 rojo serve dev.project.json
 stylua --check src example
 selene src example
+python scripts/verify-package.py
 ```
 
 Documentación: [ARCHITECTURE](docs/ARCHITECTURE.md) · [API_REFERENCE](docs/API_REFERENCE.md) · [CHANGELOG](CHANGELOG.md).
