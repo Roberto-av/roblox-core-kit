@@ -15,6 +15,8 @@ local Theme: Theme = {
 		Danger = Color3.fromRGB(220, 38, 38),
 		Warning = Color3.fromRGB(217, 119, 6),
 		Ghost = Color3.fromRGB(255, 255, 255),
+		Disabled = Color3.fromRGB(55, 65, 81),
+		Spinner = Color3.fromRGB(243, 244, 246),
 		-- Superficies y texto
 		Surface = Color3.fromRGB(31, 41, 55),
 		Text = Color3.fromRGB(243, 244, 246),

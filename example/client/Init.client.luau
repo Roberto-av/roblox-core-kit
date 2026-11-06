@@ -212,3 +212,75 @@ local function testRouter()
 end
 
 task.spawn(testRouter)
+
+-- Fase 5: demostración de Button (variantes, debounce, carga, deshabilitado, texto largo).
+local function testButtons()
+	local UiRouter = require(CoreKit.UiRouter)
+	local Button = require(CoreKit.Components.Button)
+
+	local panel = Instance.new("Frame")
+	panel.Name = "ButtonDemoPanel"
+	panel.AnchorPoint = Vector2.new(1, 0)
+	panel.Position = UDim2.fromScale(1, 0)
+	panel.Size = UDim2.fromOffset(200, 440)
+	panel.BackgroundTransparency = 0.3
+	panel.Parent = UiRouter:GetLayer("HUD")
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = panel
+
+	local counter = Instance.new("TextLabel")
+	counter.Size = UDim2.new(1, 0, 0, 24)
+	counter.Text = "Clics: 0"
+	counter.LayoutOrder = 0
+	counter.Parent = panel
+
+	local clicks = 0
+	local function onClick()
+		clicks += 1
+		counter.Text = `Clics: {clicks}`
+	end
+
+	local order = 1
+	local function add(text: string, variant: Button.ButtonVariant): Button.ButtonInstance
+		local button = Button.new({
+			Parent = panel,
+			Text = text,
+			Variant = variant,
+			Size = UDim2.new(1, 0, 0, 40),
+			LayoutOrder = order,
+			OnClick = onClick,
+		})
+		order += 1
+		return button
+	end
+
+	add("Primary", "Primary")
+	add("Secondary", "Secondary")
+	add("Danger", "Danger")
+	add("Warning", "Warning")
+	add("Ghost", "Ghost")
+	add("Texto muy largo para comprobar que se trunca sin desbordar el boton de ninguna manera", "Primary")
+
+	local disabledButton = add("Deshabilitado", "Primary")
+	disabledButton:SetDisabled(true)
+
+	local loadingButton = add("Alternar carga", "Secondary")
+	local toggled = false
+	loadingButton:SetOnClick(function()
+		onClick()
+		-- Se activa la carga 2 s y se revierte; el tamaño del botón no debe cambiar
+		if toggled then
+			return
+		end
+		toggled = true
+		loadingButton:SetLoading(true)
+		task.delay(2, function()
+			loadingButton:SetLoading(false)
+			toggled = false
+		end)
+	end)
+end
+
+task.spawn(testButtons)
