@@ -363,6 +363,8 @@ local function testModalAndDrawer()
 	local Button = require(CoreKit.Components.Button)
 	local Modal = require(CoreKit.Components.Modal)
 	local SubModal = require(CoreKit.Components.SubModal)
+	local ConfirmDialog = require(CoreKit.Components.ConfirmDialog)
+	local Toast = require(CoreKit.Components.Toast)
 
 	UiRouter:Register("Inventario", function()
 		local modal = Modal.new({ Title = "Inventario", ViewId = "Inventario" })
@@ -409,6 +411,29 @@ local function testModalAndDrawer()
 			Text = "Usar",
 			Position = UDim2.fromOffset(8, 52),
 			Size = UDim2.new(1, -16, 0, 44),
+		})
+
+		-- Fase 8: abre un ConfirmDialog por encima del drawer
+		Button.new({
+			Parent = drawer.ContentFrame,
+			Text = "Eliminar item",
+			Variant = "Danger",
+			Position = UDim2.fromOffset(8, 104),
+			Size = UDim2.new(1, -16, 0, 44),
+			OnClick = function()
+				ConfirmDialog.Show({
+					Title = "Eliminar item",
+					Message = "Esta acción no se puede deshacer. ¿Seguro que quieres continuar?",
+					ConfirmText = "Eliminar",
+					Variant = "Danger",
+					OnConfirm = function()
+						Toast.Show("Item eliminado", "Success")
+					end,
+					OnCancel = function()
+						Toast.Show("Cancelado", "Info")
+					end,
+				})
+			end,
 		})
 
 		return {

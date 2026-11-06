@@ -174,6 +174,10 @@ function Router.Init(_self: UiRouter)
 		end
 	end)
 	initialized = true
+	-- Carga diferida de ConfirmDialog (que a su vez requiere este módulo): al cargarse
+	-- registra la vista "CoreKit_ConfirmDialog". Se evita un require estático circular.
+	local dialogModule: ModuleScript = (script.Parent :: any).Components.ConfirmDialog
+	require(dialogModule)
 end
 
 function Router.GetLayer(_self: UiRouter, layer: "HUD" | ViewLayer | "Toasts"): ScreenGui
