@@ -477,8 +477,11 @@ local function testDebug()
 
 	local lastResult = "(sin resultados)"
 	local function run(commandName: string, args: { any })
-		local ok, result = DebugController.Execute(commandName, args)
-		lastResult = `{commandName}: {if ok then "OK" else "FALLO"} -> {tostring(result)}`
+		-- Execute invoca al servidor (yield); el ciclo de Iris no admite yields, por eso va en task.spawn
+		task.spawn(function()
+			local ok, result = DebugController.Execute(commandName, args)
+			lastResult = `{commandName}: {if ok then "OK" else "FALLO"} -> {tostring(result)}`
+		end)
 	end
 
 	-- Iris solo se carga si el jugador está autorizado, así que se requiere dentro del render

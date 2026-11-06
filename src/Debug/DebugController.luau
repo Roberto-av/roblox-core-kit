@@ -77,6 +77,8 @@ local function createTouchButton(gui: ScreenGui)
 end
 
 -- Dibuja la consola cada ciclo de Iris, solo cuando isOpen es true.
+-- Importante: los renderFn corren dentro del ciclo de Iris, que NO admite yields. Execute
+-- invoca al servidor (yield), así que debe llamarse desde task.spawn, nunca directamente en el render.
 local function startIris(Iris: any)
 	local openedState = Iris.State(true)
 	local sizeState = Iris.State(WINDOW_SIZE)
@@ -93,13 +95,20 @@ local function startIris(Iris: any)
 		if #tabs > 0 then
 			Iris.TabBar()
 			for _, tab in tabs do
-				Iris.Tab({ tab.Title })
-				local ok, err = pcall(tab.Render)
-				if not ok and not tab.Failed then
-					tab.Failed = true -- se registra una sola vez por pestaña
-					Logger.Error(MODULE, `error al dibujar la pestaña '{tab.Title}': {err}`)
+				-- Iris identifica cada widget por la línea de código que lo crea: todas las pestañas
+				-- salen de esta misma línea, así que cada una necesita un ID propio (PushId/PopId).
+				Iris.PushId(tab.Title)
+				local tabWidget = Iris.Tab({ tab.Title })
+				-- Modo inmediato: solo se ejecuta el render de la pestaña seleccionada
+				if tabWidget.active() then
+					local ok, err = pcall(tab.Render)
+					if not ok and not tab.Failed then
+						tab.Failed = true -- se registra una sola vez por pestaña
+						Logger.Error(MODULE, `error al dibujar la pestaña '{tab.Title}': {err}`)
+					end
 				end
-				Iris.End()
+				Iris.End() -- cierra exactamente la Tab abierta arriba
+				Iris.PopId()
 			end
 			Iris.End()
 		else
