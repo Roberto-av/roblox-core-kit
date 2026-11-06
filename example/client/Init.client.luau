@@ -284,3 +284,75 @@ local function testButtons()
 end
 
 task.spawn(testButtons)
+
+-- Fase 6: ScrollView con 30 botones (recorrible con la cruceta) y ToastService.
+local function testScrollAndToast()
+	local UiRouter = require(CoreKit.UiRouter)
+	local Button = require(CoreKit.Components.Button)
+	local ScrollView = require(CoreKit.Components.ScrollView)
+	local Toast = require(CoreKit.Components.Toast)
+
+	UiRouter:Register("Lista", function()
+		local frame = Instance.new("Frame")
+		frame.Name = "Lista"
+		frame.Size = UDim2.fromScale(0.4, 0.6)
+		frame.Position = UDim2.fromScale(0.3, 0.2)
+
+		local scroll = ScrollView.new({ Parent = frame, Size = UDim2.fromScale(1, 1) })
+		local first: GuiObject? = nil
+		for index = 1, 30 do
+			local button = Button.new({
+				Parent = scroll.Gui,
+				Text = `Elemento {index}`,
+				Size = UDim2.new(1, -8, 0, 40),
+				LayoutOrder = index,
+				OnClick = function()
+					Toast.Show(`Elemento {index} pulsado`, "Success", 1.5)
+				end,
+			})
+			if first == nil then
+				first = button.Gui
+			end
+		end
+
+		return {
+			Kind = "Screen",
+			Layer = "Windows",
+			Container = frame,
+			DefaultFocusObject = first,
+		}
+	end)
+
+	local panel = Instance.new("Frame")
+	panel.Name = "ScrollToastPanel"
+	panel.Position = UDim2.fromOffset(0, 170)
+	panel.Size = UDim2.fromOffset(160, 130)
+	panel.BackgroundTransparency = 0.3
+	panel.Parent = UiRouter:GetLayer("HUD")
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.Parent = panel
+
+	Button.new({
+		Parent = panel,
+		Text = "Abrir lista (30)",
+		Size = UDim2.new(1, 0, 0, 40),
+		OnClick = function()
+			UiRouter:Push("Lista")
+		end,
+	})
+	Button.new({
+		Parent = panel,
+		Text = "10 toasts",
+		Variant = "Secondary",
+		Size = UDim2.new(1, 0, 0, 40),
+		OnClick = function()
+			local types = { "Info", "Success", "Warning", "Error" }
+			for index = 1, 10 do
+				Toast.Show(`Toast {index}`, types[(index - 1) % 4 + 1] :: any, 4)
+			end
+		end,
+	})
+end
+
+task.spawn(testScrollAndToast)
