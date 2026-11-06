@@ -356,3 +356,90 @@ local function testScrollAndToast()
 end
 
 task.spawn(testScrollAndToast)
+
+-- Fase 7: vista "Inventario" (Modal) que abre un drawer "Detalles" (SubModal).
+local function testModalAndDrawer()
+	local UiRouter = require(CoreKit.UiRouter)
+	local Button = require(CoreKit.Components.Button)
+	local Modal = require(CoreKit.Components.Modal)
+	local SubModal = require(CoreKit.Components.SubModal)
+
+	UiRouter:Register("Inventario", function()
+		local modal = Modal.new({ Title = "Inventario", ViewId = "Inventario" })
+
+		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 8)
+		layout.Parent = modal.ContentFrame
+
+		local detailsButton = Button.new({
+			Parent = modal.ContentFrame,
+			Text = "Ver detalles",
+			Size = UDim2.new(1, -16, 0, 44),
+			OnClick = function()
+				UiRouter:Push("Detalles", { Item = "Espada" })
+			end,
+		})
+		Button.new({
+			Parent = modal.ContentFrame,
+			Text = "Otro botón del modal",
+			Variant = "Secondary",
+			Size = UDim2.new(1, -16, 0, 44),
+		})
+
+		return {
+			Kind = "Screen",
+			Layer = "Windows",
+			Container = modal.Gui,
+			DefaultFocusObject = detailsButton.Gui,
+		}
+	end)
+
+	UiRouter:Register("Detalles", function()
+		local drawer = SubModal.new({ Title = "Detalles", Side = "Right", ViewId = "Detalles" })
+
+		local itemLabel = Instance.new("TextLabel")
+		itemLabel.Size = UDim2.new(1, 0, 0, 40)
+		itemLabel.BackgroundTransparency = 1
+		itemLabel.Text = "Item"
+		itemLabel.TextScaled = true
+		itemLabel.Parent = drawer.ContentFrame
+
+		local confirmButton = Button.new({
+			Parent = drawer.ContentFrame,
+			Text = "Usar",
+			Position = UDim2.fromOffset(8, 52),
+			Size = UDim2.new(1, -16, 0, 44),
+		})
+
+		return {
+			Kind = "Overlay",
+			Layer = "Drawers",
+			Container = drawer.Gui,
+			DefaultFocusObject = confirmButton.Gui,
+			OnOpen = function(payload: any?)
+				if type(payload) == "table" and payload.Item then
+					itemLabel.Text = tostring(payload.Item)
+				end
+				drawer:PlayEnter()
+			end,
+		}
+	end)
+
+	local panel = Instance.new("Frame")
+	panel.Name = "InventoryPanel"
+	panel.Position = UDim2.fromOffset(0, 310)
+	panel.Size = UDim2.fromOffset(160, 50)
+	panel.BackgroundTransparency = 0.3
+	panel.Parent = UiRouter:GetLayer("HUD")
+
+	Button.new({
+		Parent = panel,
+		Text = "Abrir Inventario",
+		Size = UDim2.fromScale(1, 1),
+		OnClick = function()
+			UiRouter:Push("Inventario")
+		end,
+	})
+end
+
+task.spawn(testModalAndDrawer)
