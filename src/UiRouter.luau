@@ -1,11 +1,12 @@
 --!strict
 
 -- UiRouter: capas (ScreenGuis) y pila LIFO de vistas (secciones 2, 3.1 y 3.2).
--- Fase 3: capas, Register/Push/Pop/Clear/GetTop/IsOpen/StackChanged y ModalUnlock.
--- El foco y el retroceso (3.2 pasos 6-8.1 y 3.3) llegan en la Fase 4.
+-- Incluye la trampa de foco, el foco por gamepad y el retroceso por B/Backspace (3.2 y 3.3).
 
+local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 
 local Packages = script.Parent.Parent
 local Signal = require(Packages.Signal)
@@ -23,9 +24,12 @@ type LayerName = "HUD" | "Windows" | "Drawers" | "Dialogs" | "Toasts"
 type StackEntry = {
 	Id: string,
 	View: ViewContract,
+	LastFocused: GuiObject?, -- foco guardado cuando otra vista se abre encima
 }
 
 local MODULE = "UiRouter"
+local BACK_ACTION = "CoreKit_BackAction"
+local BACK_PRIORITY = 3000
 
 -- Capas creadas por el router (CoreKit_Debug lo crea DebugController).
 local LAYER_ORDER: { { Name: LayerName, DisplayOrder: number } } = {
@@ -54,6 +58,67 @@ local initialized = false
 local factories: { [string]: ViewFactory } = {}
 local views: { [string]: ViewContract } = {}
 local stack: { StackEntry } = {}
+
+local GAMEPAD_TYPES: { [Enum.UserInputType]: boolean } = {
+	[Enum.UserInputType.Gamepad1] = true,
+	[Enum.UserInputType.Gamepad2] = true,
+	[Enum.UserInputType.Gamepad3] = true,
+	[Enum.UserInputType.Gamepad4] = true,
+	[Enum.UserInputType.Gamepad5] = true,
+	[Enum.UserInputType.Gamepad6] = true,
+	[Enum.UserInputType.Gamepad7] = true,
+	[Enum.UserInputType.Gamepad8] = true,
+}
+
+local function isGamepadActive(): boolean
+	return GAMEPAD_TYPES[UserInputService:GetLastInputType()] == true
+end
+
+-- Un objeto puede recibir foco si está en el árbol, es visible y seleccionable.
+local function canFocus(object: GuiObject?, container: GuiObject): boolean
+	return object ~= nil
+		and object.Parent ~= nil
+		and object:IsDescendantOf(container)
+		and object.Visible
+		and object.Selectable
+end
+
+-- Asigna el foco solo con entrada de gamepad (con ratón no debe aparecer el recuadro de selección).
+local function focusDefault(entry: StackEntry)
+	if not isGamepadActive() then
+		return
+	end
+	local target = entry.View.DefaultFocusObject
+	task.defer(function()
+		if stack[#stack] == entry and canFocus(target, entry.View.Container) then
+			GuiService.SelectedObject = target
+		end
+	end)
+end
+
+-- Handler de B / Backspace (3.3): actúa solo en Begin y devuelve Sink.
+local function handleBack(
+	_actionName: string,
+	state: Enum.UserInputState,
+	_input: InputObject
+): Enum.ContextActionResult
+	if state ~= Enum.UserInputState.Begin then
+		return Enum.ContextActionResult.Pass
+	end
+	if UserInputService:GetFocusedTextBox() ~= nil then
+		return Enum.ContextActionResult.Pass -- el jugador está escribiendo
+	end
+	if #stack == 0 then
+		return Enum.ContextActionResult.Pass
+	end
+	local top = stack[#stack]
+	if top.View.OnBackRequested then
+		task.spawn(top.View.OnBackRequested) -- p. ej. ConfirmDialog lo trata como Cancelar
+	else
+		Router.Pop(Router :: any)
+	end
+	return Enum.ContextActionResult.Sink
+end
 
 local function createLayer(name: LayerName, displayOrder: number, playerGui: PlayerGui): ScreenGui
 	local guiName = `CoreKit_{name}`
@@ -101,6 +166,13 @@ function Router.Init(_self: UiRouter)
 		layers[definition.Name] = createLayer(definition.Name, definition.DisplayOrder, playerGui)
 	end
 	modalUnlock = createModalUnlock(layers.Windows)
+	-- Al pasar a gamepad con pila no vacía y sin selección, enfoca la cima
+	UserInputService.LastInputTypeChanged:Connect(function()
+		local top = stack[#stack]
+		if top and isGamepadActive() and GuiService.SelectedObject == nil then
+			focusDefault(top)
+		end
+	end)
 	initialized = true
 end
 
@@ -182,6 +254,8 @@ function Router.Push(self: UiRouter, viewId: string, payload: any?): boolean
 	-- 4. Vista superior previa
 	local previous = stack[#stack]
 	if previous then
+		local selected = GuiService.SelectedObject
+		previous.LastFocused = if selected and selected:IsA("GuiObject") then selected else nil
 		previous.View.Container.Interactable = false
 		if view.Kind == "Screen" then
 			for _, entry in stack do
@@ -190,9 +264,29 @@ function Router.Push(self: UiRouter, viewId: string, payload: any?): boolean
 		end
 	end
 	-- 5. Insertar y mostrar
-	table.insert(stack, { Id = viewId, View = view })
+	local entry: StackEntry = { Id = viewId, View = view }
+	table.insert(stack, entry)
 	view.Container.Visible = true
 	view.Container.Interactable = true
+	-- 6. Trampa de foco: el stick y la cruceta no salen del contenedor
+	view.Container.SelectionGroup = true
+	view.Container.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+	view.Container.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+	view.Container.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+	view.Container.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
+	-- 7. Foco por defecto (solo gamepad)
+	focusDefault(entry)
+	-- 8. Pila antes vacía: acción de retroceso
+	if #stack == 1 then
+		ContextActionService:BindActionAtPriority(
+			BACK_ACTION,
+			handleBack,
+			false,
+			BACK_PRIORITY,
+			Enum.KeyCode.ButtonB,
+			Enum.KeyCode.Backspace
+		)
+	end
 	-- 8.2 Pila antes vacía: activar el botón que libera el cursor
 	if #stack == 1 and modalUnlock then
 		modalUnlock.Visible = true
@@ -237,7 +331,17 @@ function Router.Pop(_self: UiRouter, expectedViewId: string?): boolean
 			end
 		end
 		newTop.View.Container.Interactable = true
+		-- Restaurar el foco solo con gamepad y si el objeto guardado sigue siendo válido
+		if isGamepadActive() then
+			local saved = newTop.LastFocused
+			local target = if canFocus(saved, newTop.View.Container) then saved else newTop.View.DefaultFocusObject
+			if canFocus(target, newTop.View.Container) then
+				GuiService.SelectedObject = target
+			end
+		end
+		newTop.LastFocused = nil
 	else
+		ContextActionService:UnbindAction(BACK_ACTION)
 		-- 4. Pila vacía
 		if modalUnlock then
 			modalUnlock.Visible = false

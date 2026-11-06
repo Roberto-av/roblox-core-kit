@@ -89,16 +89,45 @@ local function createTestView(title: string, kind: "Screen" | "Overlay", layer: 
 		frame.Position = UDim2.new(0.3, offset, 0.4, offset)
 
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
+		label.Size = UDim2.fromScale(1, 0.3)
 		label.BackgroundTransparency = 1
 		label.Text = title
 		label.TextScaled = true
 		label.Parent = frame
 
+		-- Botones seleccionables para probar foco y retroceso con gamepad
+		local list = Instance.new("Frame")
+		list.Position = UDim2.fromScale(0, 0.3)
+		list.Size = UDim2.fromScale(1, 0.7)
+		list.BackgroundTransparency = 1
+		list.Parent = frame
+		local layout = Instance.new("UIListLayout")
+		layout.Parent = list
+
+		local buttons: { TextButton } = {}
+		for index = 1, 2 do
+			local button = Instance.new("TextButton")
+			button.Name = `Boton{index}`
+			button.Size = UDim2.new(1, 0, 0.3, 0)
+			button.Text = `{title} / Boton {index}`
+			button.Parent = list
+			buttons[index] = button
+		end
+
+		-- El Screen A incluye un TextBox: Backspace no debe cerrar la vista mientras se escribe
+		if title == "Screen A" then
+			local box = Instance.new("TextBox")
+			box.Size = UDim2.new(1, 0, 0.3, 0)
+			box.Text = ""
+			box.PlaceholderText = "Escribe aquí (Backspace no cierra)"
+			box.Parent = list
+		end
+
 		return {
 			Kind = kind,
 			Layer = layer,
 			Container = frame,
+			DefaultFocusObject = buttons[1],
 		}
 	end
 end
