@@ -2,6 +2,7 @@
 
 -- Ejemplo / prueba de la Fase 1: Cleaner con 3 conexiones.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CoreKit = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("CoreKit")
@@ -78,3 +79,107 @@ local function testSoundPlayer()
 end
 
 testSoundPlayer()
+
+-- Fase 3: UiRouter con tres vistas de prueba (Screen A, Screen B, Overlay C).
+local function createTestView(title: string, kind: "Screen" | "Overlay", layer: "Windows" | "Drawers", offset: number)
+	return function()
+		local frame = Instance.new("Frame")
+		frame.Name = title
+		frame.Size = UDim2.fromScale(0.4, 0.4)
+		frame.Position = UDim2.new(0.3, offset, 0.4, offset)
+
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = title
+		label.TextScaled = true
+		label.Parent = frame
+
+		return {
+			Kind = kind,
+			Layer = layer,
+			Container = frame,
+		}
+	end
+end
+
+local function testRouter()
+	local UiRouter = require(CoreKit.UiRouter)
+	UiRouter:Init()
+	UiRouter:Init() -- no debe duplicar capas
+
+	UiRouter:Register("A", createTestView("Screen A", "Screen", "Windows", 0))
+	UiRouter:Register("B", createTestView("Screen B", "Screen", "Windows", 20))
+	UiRouter:Register("C", createTestView("Overlay C", "Overlay", "Drawers", 40))
+
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local results: { [string]: boolean } = {}
+
+	local function container(viewId: string): GuiObject
+		local layerName = if viewId == "C" then "Drawers" else "Windows"
+		local gui = UiRouter:GetLayer(layerName)
+		return gui:FindFirstChild(
+			if viewId == "A" then "Screen A" elseif viewId == "B" then "Screen B" else "Overlay C"
+		) :: GuiObject
+	end
+
+	local layerCount = 0
+	for _, child in playerGui:GetChildren() do
+		if string.sub(child.Name, 1, 8) == "CoreKit_" then
+			layerCount += 1
+		end
+	end
+	results["Init doble no duplica (5 capas)"] = layerCount == 5
+
+	UiRouter:Push("A")
+	UiRouter:Push("B")
+	results["Push A->B oculta A"] = not container("A").Visible and container("B").Visible
+
+	UiRouter:Push("C")
+	results["Push C mantiene B visible y no interactiva"] = container("B").Visible
+		and not container("B").Interactable
+		and container("C").Visible
+
+	results["Pop('X') con otra cima devuelve false"] = UiRouter:Pop("X") == false
+	local popped = UiRouter:Pop() and UiRouter:Pop() and UiRouter:Pop()
+	results["Pop x3 deja la pila vacia"] = popped and UiRouter:GetTop() == nil and UiRouter:Pop() == false
+
+	UiRouter:Push("A")
+	UiRouter:Push("A")
+	local first = UiRouter:Pop()
+	results["Push A dos veces no duplica"] = first and UiRouter:GetTop() == nil
+
+	for name, ok in results do
+		if ok then
+			Logger.Info(MODULE, `Router OK: {name}`)
+		else
+			Logger.Error(MODULE, `Router FALLO: {name}`)
+		end
+	end
+
+	-- Panel manual en el HUD para probar con F5 (cursor en primera persona, etc.)
+	local hud = UiRouter:GetLayer("HUD")
+	local panel = Instance.new("Frame")
+	panel.Name = "RouterTestPanel"
+	panel.Size = UDim2.fromOffset(120, 160)
+	panel.Parent = hud
+	local layout = Instance.new("UIListLayout")
+	layout.Parent = panel
+	for _, action in { "Push A", "Push B", "Push C", "Pop", "Clear" } do
+		local button = Instance.new("TextButton")
+		button.Size = UDim2.new(1, 0, 0, 30)
+		button.Text = action
+		button.Parent = panel
+		button.Activated:Connect(function()
+			if action == "Pop" then
+				UiRouter:Pop()
+			elseif action == "Clear" then
+				UiRouter:Clear()
+			else
+				UiRouter:Push(string.sub(action, 6))
+			end
+		end)
+	end
+end
+
+task.spawn(testRouter)
