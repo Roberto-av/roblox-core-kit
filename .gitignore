@@ -1,0 +1,16 @@
+# Dependencias de Wally y paquetes locales
+Packages/
+ServerPackages/
+
+# Toolchain y binarios de Rokit
+.rokit/
+
+# Archivos de Roblox compilados y locks
+*.rbxl
+*.rbxlx
+*.rbxm
+*.lock
+sourcemap.json
+
+# Builds
+build/

@@ -1,0 +1,16 @@
+{
+	"name": "roblox-core-kit-dev",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"Packages": {
+				"$path": "Packages",
+				"CoreKit": { "$path": "src" }
+			}
+		},
+		"ServerScriptService": { "Example": { "$path": "example/server" } },
+		"StarterPlayer": {
+			"StarterPlayerScripts": { "Example": { "$path": "example/client" } }
+		}
+	}
+}
