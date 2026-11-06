@@ -468,3 +468,68 @@ local function testModalAndDrawer()
 end
 
 task.spawn(testModalAndDrawer)
+
+-- Fase 10: consola de depuración con pestañas "Jugador" y "UI".
+local function testDebug()
+	local UiRouter = require(CoreKit.UiRouter)
+	local ConfirmDialog = require(CoreKit.Components.ConfirmDialog)
+	local DebugController = require(CoreKit.Debug.DebugController)
+
+	local lastResult = "(sin resultados)"
+	local function run(commandName: string, args: { any })
+		local ok, result = DebugController.Execute(commandName, args)
+		lastResult = `{commandName}: {if ok then "OK" else "FALLO"} -> {tostring(result)}`
+	end
+
+	-- Iris solo se carga si el jugador está autorizado, así que se requiere dentro del render
+	DebugController.RegisterTab("Jugador", function()
+		local Iris = require(CoreKit.Parent.Iris) :: any
+		if Iris.Button({ "Dar 100 monedas" }).clicked() then
+			run("give_coins", { 100 })
+		end
+		if Iris.Button({ "Velocidad 16" }).clicked() then
+			run("set_speed", { 16 })
+		end
+		if Iris.Button({ "Velocidad 50" }).clicked() then
+			run("set_speed", { 50 })
+		end
+		if Iris.Button({ "Decir hola" }).clicked() then
+			run("say", { "hola" })
+		end
+		if Iris.Button({ "Expulsarme (con confirmación)" }).clicked() then
+			ConfirmDialog.Show({
+				Title = "Expulsar",
+				Message = "Se ejecutará kick sobre tu propio jugador.",
+				Variant = "Danger",
+				OnConfirm = function()
+					run("kick", { Players.LocalPlayer })
+				end,
+			})
+		end
+		Iris.Text({ lastResult })
+	end)
+
+	local history: { string } = {}
+	local currentTop = "(vacía)"
+	UiRouter.StackChanged:Connect(function(top: string?)
+		currentTop = top or "(vacía)"
+		table.insert(history, 1, currentTop)
+		if #history > 8 then
+			table.remove(history)
+		end
+	end)
+
+	DebugController.RegisterTab("UI", function()
+		local Iris = require(CoreKit.Parent.Iris) :: any
+		Iris.Text({ `Cima de la pila: {currentTop}` })
+		Iris.Separator()
+		Iris.Text({ "Últimos cambios:" })
+		for _, entry in history do
+			Iris.Text({ `- {entry}` })
+		end
+	end)
+
+	DebugController.Init()
+end
+
+task.spawn(testDebug)
